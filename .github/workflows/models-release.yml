@@ -1,0 +1,56 @@
+name: Publish AI models
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag that holds the models"
+        default: "models-v1"
+      include_optional:
+        description: "Also fetch optional models (SCNet fast, Spleeter fallback)"
+        default: "true"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install inspection tools
+        run: pip install onnx onnxruntime numpy
+
+      - name: Download and verify models (SHA-256 + size)
+        env:
+          INCLUDE_OPTIONAL: ${{ inputs.include_optional }}
+        run: bash scripts/fetch_models.sh
+
+      - name: Inspect models (input/output names, shapes, smoke test)
+        run: python scripts/inspect_models.py models models/models_inspect.json
+
+      - name: Add manifest if present
+        run: |
+          if [ -f app/src/main/assets/models_manifest.json ]; then cp app/src/main/assets/models_manifest.json models/models_manifest.json; fi
+
+      - name: Save inspection report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: models-inspect
+          path: models/models_inspect.json
+
+      - name: Publish GitHub Release with models
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" models/* --clobber
+          else
+            gh release create "$TAG" models/* --title "AST PRO models ($TAG)" --notes-file models/RELEASE_NOTES.md
+          fi

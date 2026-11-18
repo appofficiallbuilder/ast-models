@@ -1,0 +1,7 @@
+Repo ka naam: ast-models   (Public)
+Zip ko pehle extract karein. Phone par ".github" folder chhupa hua ho sakta hai.
+Agar upload mein ".github" na dikhe to GitHub mein Add file > Create new file chunein, naam mein
+  .github/workflows/models-release.yml
+likhein aur file ka text paste karein. Isi tarah scripts/fetch_models.sh aur scripts/inspect_models.py banayein.
+Phir: Settings > Actions > General > Workflow permissions > Read and write > Save.
+Phir: Actions > Publish AI models > Run workflow (tag models-v1).
